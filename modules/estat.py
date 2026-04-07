@@ -18,18 +18,16 @@ load_dotenv()
 
 ESTAT_API_URL = "https://api.e-stat.go.jp/rest/3.0/app/json/getStatsData"
 
-def _get_secret(key: str) -> str:
-    """環境変数 → st.secrets の順でAPIキーを取得する。"""
-    val = os.getenv(key, "")
+def _get_estat_app_id() -> str:
+    """環境変数 → st.secrets の順でAPIキーを取得する。毎回呼び出し時に評価。"""
+    val = os.getenv("ESTAT_APP_ID", "")
     if val:
         return val
     try:
         import streamlit as st
-        return st.secrets.get(key, "")
+        return st.secrets.get("ESTAT_APP_ID", "")
     except Exception:
         return ""
-
-ESTAT_APP_ID = _get_secret("ESTAT_APP_ID")
 
 # 1次メッシュコード → 500mメッシュ統計テーブルID（2020年国勢調査）
 # getStatsListから取得した全国151メッシュ分のマッピング
@@ -335,7 +333,8 @@ def _fetch_estat_data(
     Returns:
         {mesh_code: {cat_code: value}} の辞書
     """
-    if not ESTAT_APP_ID:
+    app_id = _get_estat_app_id()
+    if not app_id:
         print("[estat] ESTAT_APP_IDが設定されていません")
         return {}
 
@@ -349,7 +348,7 @@ def _fetch_estat_data(
         area_filter = ",".join(batch)
 
         params = {
-            "appId": ESTAT_APP_ID,
+            "appId": app_id,
             "statsDataId": stats_data_id,
             "cdArea": area_filter,
             "cdCat01": cat_filter,

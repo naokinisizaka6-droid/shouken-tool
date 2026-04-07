@@ -19,18 +19,16 @@ load_dotenv()
 
 LANDPRICE_API_URL = "https://www.reinfolib.mlit.go.jp/ex-api/external/XPT002"
 
-def _get_secret(key: str) -> str:
-    """環境変数 → st.secrets の順でAPIキーを取得する。"""
-    val = os.getenv(key, "")
+def _get_reinfolib_api_key() -> str:
+    """環境変数 → st.secrets の順でAPIキーを取得する。毎回呼び出し時に評価。"""
+    val = os.getenv("REINFOLIB_API_KEY", "")
     if val:
         return val
     try:
         import streamlit as st
-        return st.secrets.get(key, "")
+        return st.secrets.get("REINFOLIB_API_KEY", "")
     except Exception:
         return ""
-
-LANDPRICE_API_KEY = _get_secret("REINFOLIB_API_KEY")
 
 
 def _latlon_to_tile(lat: float, lng: float, zoom: int) -> tuple[int, int]:
@@ -92,7 +90,8 @@ def fetch_landprice(
         }
         APIキー未設定またはデータなしの場合はNone。
     """
-    if not LANDPRICE_API_KEY:
+    api_key = _get_reinfolib_api_key()
+    if not api_key:
         print("[landprice] REINFOLIB_API_KEYが設定されていません")
         return None
 
@@ -115,7 +114,7 @@ def fetch_landprice(
                 "priceClassification": "0",  # 地価公示のみ
             }
             headers = {
-                "Ocp-Apim-Subscription-Key": LANDPRICE_API_KEY,
+                "Ocp-Apim-Subscription-Key": api_key,
             }
 
             try:
