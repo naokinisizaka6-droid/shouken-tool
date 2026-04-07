@@ -18,13 +18,42 @@ import matplotlib.font_manager as fm
 import numpy as np
 from fpdf import FPDF
 
+# Linux環境（Streamlit Cloud）ではフォントキャッシュを再構築
+if os.name != "nt":
+    fm._load_fontmanager(try_read_cache=False)
+
 # 日本語フォント設定（デプロイ先で利用可能なフォントを自動検出）
-_FONT_PATH: Optional[str] = None
-for _candidate in ["Noto Sans JP", "Meiryo", "Yu Gothic", "MS Gothic", "BIZ UDGothic"]:
-    _matches = [f for f in fm.fontManager.ttflist if f.name == _candidate and "Bold" not in f.name]
-    if _matches:
-        _FONT_PATH = _matches[0].fname
-        break
+def _find_japanese_font() -> Optional[str]:
+    """日本語対応フォントのパスを検出する。Windows/Linux両対応。"""
+    # 1. matplotlibのフォントマネージャーから検索
+    for candidate in ["Noto Sans JP", "Noto Sans CJK JP", "Meiryo", "Yu Gothic", "MS Gothic", "BIZ UDGothic"]:
+        matches = [f for f in fm.fontManager.ttflist if candidate in f.name and "Bold" not in f.name]
+        if matches:
+            return matches[0].fname
+
+    # 2. Linux（Streamlit Cloud）でのフォントパスを直接検索
+    linux_font_paths = [
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJKjp-Regular.otf",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJKjp-Regular.otf",
+        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+    ]
+    for path in linux_font_paths:
+        if os.path.exists(path):
+            return path
+
+    # 3. フォントディレクトリを再帰検索（最終手段）
+    for font_dir in ["/usr/share/fonts"]:
+        if os.path.isdir(font_dir):
+            for root, dirs, files in os.walk(font_dir):
+                for f in files:
+                    if "noto" in f.lower() and "cjk" in f.lower() and f.endswith((".ttf", ".otf", ".ttc")):
+                        return os.path.join(root, f)
+
+    return None
+
+_FONT_PATH = _find_japanese_font()
 
 
 def _setup_matplotlib_font() -> None:
@@ -77,9 +106,13 @@ class ReportPDF(FPDF):
     def _setup_font(self) -> None:
         """日本語フォントを登録する。"""
         if _FONT_PATH:
-            self.add_font("JP", "", _FONT_PATH, uni=True)
-            self.add_font("JP", "B", _FONT_PATH, uni=True)
-            self._jp_font = "JP"
+            try:
+                self.add_font("JP", "", _FONT_PATH, uni=True)
+                self.add_font("JP", "B", _FONT_PATH, uni=True)
+                self._jp_font = "JP"
+            except Exception as e:
+                print(f"[report] フォント登録失敗: {e}")
+                self._jp_font = "Helvetica"
         else:
             self._jp_font = "Helvetica"
 

@@ -150,14 +150,18 @@ else:
     with col_header1:
         st.caption(f"緯度経度: {analysis['lat']:.6f}, {analysis['lng']:.6f}")
     with col_header2:
-        pdf_bytes = generate_report(analysis)
-        st.download_button(
-            label="📄 PDFレポート",
-            data=pdf_bytes,
-            file_name=f"商圏分析_{analysis['matched']}.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
+        try:
+            pdf_bytes = generate_report(analysis)
+            st.download_button(
+                label="📄 PDFレポート",
+                data=pdf_bytes,
+                file_name=f"商圏分析_{analysis['matched']}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+        except Exception as e:
+            st.button("📄 PDF生成エラー", disabled=True, use_container_width=True)
+            st.caption(f"PDF生成に失敗: {e}")
 
     col1, col2 = st.columns([3, 2])
 
