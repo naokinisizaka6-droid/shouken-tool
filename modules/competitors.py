@@ -9,7 +9,12 @@ import requests
 from typing import List, Dict, Any
 
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# メインサーバーが混雑時に代替サーバーへフォールバック
+OVERPASS_URLS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter",
+    "https://z.overpass-api.de/api/interpreter",
+]
 
 # OSMのamenityタグ -> 日本語業態カテゴリ
 AMENITY_LABELS = {
@@ -44,12 +49,19 @@ def fetch_competitors(lat: float, lng: float, radius_m: int = 1000) -> List[Dict
     out center body;
     """
 
-    try:
-        resp = requests.post(OVERPASS_URL, data={"data": query}, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-    except (requests.RequestException, ValueError) as e:
-        print(f"[competitors] Overpass APIエラー: {e}")
+    data = None
+    for url in OVERPASS_URLS:
+        try:
+            resp = requests.post(url, data={"data": query}, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            break
+        except (requests.RequestException, ValueError) as e:
+            print(f"[competitors] {url} エラー: {e}")
+            continue
+
+    if data is None:
+        print("[competitors] 全サーバーで取得失敗")
         return []
 
     results = []
