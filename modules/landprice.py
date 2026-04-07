@@ -18,7 +18,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 LANDPRICE_API_URL = "https://www.reinfolib.mlit.go.jp/ex-api/external/XPT002"
-LANDPRICE_API_KEY = os.getenv("REINFOLIB_API_KEY", "")
+
+def _get_secret(key: str) -> str:
+    """環境変数 → st.secrets の順でAPIキーを取得する。"""
+    val = os.getenv(key, "")
+    if val:
+        return val
+    try:
+        import streamlit as st
+        return st.secrets.get(key, "")
+    except Exception:
+        return ""
+
+LANDPRICE_API_KEY = _get_secret("REINFOLIB_API_KEY")
 
 
 def _latlon_to_tile(lat: float, lng: float, zoom: int) -> tuple[int, int]:

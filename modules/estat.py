@@ -17,7 +17,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 ESTAT_API_URL = "https://api.e-stat.go.jp/rest/3.0/app/json/getStatsData"
-ESTAT_APP_ID = os.getenv("ESTAT_APP_ID", "")
+
+def _get_secret(key: str) -> str:
+    """環境変数 → st.secrets の順でAPIキーを取得する。"""
+    val = os.getenv(key, "")
+    if val:
+        return val
+    try:
+        import streamlit as st
+        return st.secrets.get(key, "")
+    except Exception:
+        return ""
+
+ESTAT_APP_ID = _get_secret("ESTAT_APP_ID")
 
 # 1次メッシュコード → 500mメッシュ統計テーブルID（2020年国勢調査）
 # getStatsListから取得した全国151メッシュ分のマッピング
