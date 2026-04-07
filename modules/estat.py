@@ -107,8 +107,12 @@ CAT_CODES = {
     "0360": "single_households",    # 1人世帯数
 }
 
-# SQLiteキャッシュ設定
-CACHE_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "cache", "estat_cache.db")
+# SQLiteキャッシュ設定（Streamlit Cloudでは/tmpに保存）
+import tempfile
+_cache_dir = os.path.join(os.path.dirname(__file__), "..", "data", "cache")
+if not os.access(os.path.dirname(os.path.abspath(_cache_dir)), os.W_OK):
+    _cache_dir = os.path.join(tempfile.gettempdir(), "estat_cache")
+CACHE_DB_PATH = os.path.join(_cache_dir, "estat_cache.db")
 
 
 # ============================================================
