@@ -6,6 +6,7 @@
 """
 
 import math
+import time
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -60,15 +61,19 @@ def fetch_nearest_stations(
     """
 
     data = None
-    for url in OVERPASS_URLS:
-        try:
-            resp = requests.post(url, data={"data": query}, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
+    for attempt in range(2):
+        for url in OVERPASS_URLS:
+            try:
+                resp = requests.post(url, data={"data": query}, timeout=60)
+                resp.raise_for_status()
+                data = resp.json()
+                break
+            except (requests.RequestException, ValueError) as e:
+                print(f"[stations] {url} エラー (試行{attempt+1}): {e}")
+                time.sleep(2)
+                continue
+        if data is not None:
             break
-        except (requests.RequestException, ValueError) as e:
-            print(f"[stations] {url} エラー: {e}")
-            continue
 
     if data is None:
         print("[stations] 全サーバーで取得失敗")

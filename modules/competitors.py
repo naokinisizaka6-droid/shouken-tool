@@ -5,6 +5,8 @@ APIキー不要・無料。
 amenityタグで飲食店を絞り込み、cuisineタグで業態分類する。
 """
 
+import time
+
 import requests
 from typing import List, Dict, Any
 
@@ -15,6 +17,7 @@ OVERPASS_URLS = [
     "https://lz4.overpass-api.de/api/interpreter",
     "https://z.overpass-api.de/api/interpreter",
 ]
+MAX_RETRIES = 2  # 全サーバーを2巡する
 
 # OSMのamenityタグ -> 日本語業態カテゴリ
 AMENITY_LABELS = {
@@ -50,15 +53,19 @@ def fetch_competitors(lat: float, lng: float, radius_m: int = 1000) -> List[Dict
     """
 
     data = None
-    for url in OVERPASS_URLS:
-        try:
-            resp = requests.post(url, data={"data": query}, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
+    for attempt in range(MAX_RETRIES):
+        for url in OVERPASS_URLS:
+            try:
+                resp = requests.post(url, data={"data": query}, timeout=60)
+                resp.raise_for_status()
+                data = resp.json()
+                break
+            except (requests.RequestException, ValueError) as e:
+                print(f"[competitors] {url} エラー (試行{attempt+1}): {e}")
+                time.sleep(2)
+                continue
+        if data is not None:
             break
-        except (requests.RequestException, ValueError) as e:
-            print(f"[competitors] {url} エラー: {e}")
-            continue
 
     if data is None:
         print("[competitors] 全サーバーで取得失敗")
